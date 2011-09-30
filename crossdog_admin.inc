@@ -133,8 +133,10 @@ function crossdog_admin_settings() {
   crossdog_generate_keys(); // only has to be called once
   $form = array();   
   $crossdog_types = variable_get('crossdog_types', array());
-  if (is_array($crossdog_types) && count($crossdog_types)) $crossdog_types = implode("\n", $crossdog_types);  
+  if (is_array($crossdog_types) && count($crossdog_types)) $crossdog_types = implode("\n", $crossdog_types);    
   $crossdog_severities = array_keys(variable_get('crossdog_severities', array()));   
+ 
+
   $form['log_rules'] = array(
     '#type'  =>  'fieldset',
     '#title' =>  t('Log Sharing Rules'), 
@@ -171,32 +173,34 @@ function crossdog_admin_settings() {
     '#default_value' => variable_get('crossdog_show_messages', FALSE), 
   ); 
 
+
   $crossdog_clients = variable_get('crossdog_clients', array());
-  if ($crossdog_clients && count($crossdog_clients)) $crossdog_clients = implode("\n", $crossdog_clients);  
+  //if ($crossdog_clients && count($crossdog_clients)) 
+  $crossdog_clients = implode("\n", $crossdog_clients);  
   $crossdog_servers = variable_get('crossdog_servers', array()); 
-  if ($crossdog_servers && count($crossdog_servers)) $crossdog_servers = implode("\n", $crossdog_servers); 
-  
-  
+  if ($crossdog_servers && count($crossdog_servers)) $crossdog_servers = implode("\n", $crossdog_servers);  
+ 
   $server_access_key = variable_get('crossdog_server_key', '');  
   $form['client_server'] = array(
     '#type'  =>  'fieldset',
     '#title' =>  t('Client / Server Settings'), 
     '#collapsible' =>  TRUE, 
-    '#collapsed' =>  ($crossdog_clients && $crossdog_servers), 
+    '#collapsed' =>  FALSE, //($crossdog_clients && $crossdog_servers), 
     '#description' => t('Crossdog allows a website to act as an aggregation server to collect watchdog logs from '.
     'client websites. The same module provides both roles. To collect logs from another site, provide "Client Domains" '.
     'and to share this site\'s watchdog logs with an aggregation server, provide it\'s "Server Access Key"'),
-  ); 
+  );  
   // clients to check
   $form['client_server']['crossdog_clients'] = array(
     '#type' => 'textarea',
     '#title' => t('Client Domains (if this is an aggregation server)'),
-    '#description' => t('Optional: Act as an aggregation server and request logs from these websites.' . 
-      "<br/><i>If this site is used as an aggregation server, its access key is <b>{$server_access_key}</b></i>"
-     ),
+    '#description' => t('Optional: Act as an aggregation server and request logs from these websites.' ) . 
+      "<br/><i>" .
+      t('If this site is used as an aggregation server, its access key is') .
+      "  <b>{$server_access_key}</b></i>", 
     '#default_value' => $crossdog_clients,
     '#cols' => 60,
-    '#rows' => 2,
+    '#rows' => 3,
   );   
   
   if ($agg_count = db_query("SELECT count(*) FROM {crossdog}")->fetchField()) {
@@ -231,7 +235,7 @@ function crossdog_admin_settings_submit($form, &$form_state) {
   
   // crossdog_types
   $crossdog_types = array();
-  if ($types = $input['crossdog_types']) { // needs split into keyed array
+  if (isset($input['crossdog_types']) && ($types = $input['crossdog_types'])) { // needs split into keyed array
     $types = str_replace(",", "\n", $types);
     $types = explode("\n", $types);
     foreach ($types as $type) {
@@ -243,7 +247,7 @@ function crossdog_admin_settings_submit($form, &$form_state) {
   
   // crossdog_severities 
   $crossdog_severities = array();
-  if ($severities = $input['crossdog_severities']) { // array, needs parsed and only keyed items left ?  
+  if (isset($input['crossdog_severities']) && ($severities = $input['crossdog_severities'])) { // array, needs parsed and only keyed items left ?  
     foreach ($severities as $type) {
       $type = trim(strtolower($type));
       $crossdog_severities[$type] = $type;  
@@ -253,7 +257,7 @@ function crossdog_admin_settings_submit($form, &$form_state) {
   
   // crossdog_clients
   $crossdog_clients = array();
-  if ($clients = $input['crossdog_clients']) { // needs split into keyed array
+  if (isset($input['crossdog_clients']) && ($clients = $input['crossdog_clients'])) { // needs split into keyed array
     $clients = explode("\n", $clients);
     foreach ($clients as $client) {
       $client = trim(strtolower($client));
@@ -265,7 +269,7 @@ function crossdog_admin_settings_submit($form, &$form_state) {
   
   // crossdog_access_keys
   $crossdog_access_keys = array();
-  if ($keys = $input['crossdog_access_keys']) { // needs split into keyed array
+  if (isset($input['crossdog_access_keys']) && ($keys = $input['crossdog_access_keys'])) { // needs split into keyed array
     $keys = str_replace(",", "\n", $keys);
     $keys = explode("\n", $keys);
     foreach ($keys as $key) {
@@ -276,7 +280,10 @@ function crossdog_admin_settings_submit($form, &$form_state) {
   variable_set('crossdog_access_keys', $crossdog_access_keys);  
   
   // show drupal message on matching logs
-  variable_set('crossdog_show_messages', $input['crossdog_show_messages']); 
+  if (isset($input['crossdog_show_messages'])) {
+    variable_set('crossdog_show_messages', $input['crossdog_show_messages']); 
+  }
+  else variable_set('crossdog_show_messages', array());  
   
   // delete matching logs  crossdog_delete_all
   if (isset($input['crossdog_delete_all']) && $input['crossdog_delete_all']) {
