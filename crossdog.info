@@ -1,0 +1,5 @@
+name = Cross Dog
+description = Receive and aggregate select watchdog messages from remote sites
+core = 7.x   
+configure = admin/config/system/crossdog
+dependencies[] = dblog

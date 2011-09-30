@@ -1,0 +1,15 @@
+
+
+div.site_group {
+  margin:20px; padding:10px; border: 1px soid silver; background-color: #FAFAFA;
+  padding-top:3px;
+  border-radius: 15px;
+  box-shadow: 5px 5px 10px #888;
+}
+
+div.more_info {
+  margin:10px; margin-left:20px; margin-bottom:20px; padding:10px;
+  border: 1px solid silver;  background: #EEE;
+  display:none;
+  border-radius: 5px;
+}

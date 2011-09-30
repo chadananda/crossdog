@@ -1,0 +1,206 @@
+<?php
+
+/**
+ * @file
+ * hooks and api for crossdog
+ */ 
+
+// crossdog module 
+// menu - settings page, report page, server handler, client handler
+
+// handler for communications - see blink for key, verification
+
+// simple version uses no verification 
+
+// set server domain, only accept requests from that domain
+// send all watchdog messages?
+
+/**
+ * Implements hook_menu().
+ */
+function crossdog_menu() { 
+  $items['admin/config/system/crossdog'] = array(
+    'title' => 'Crossdog',
+    'description' => 'Crossdog',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('crossdog_admin_settings'),
+    'access arguments' => array('administer site configuration'), 
+    'file' => 'crossdog_admin.inc', 
+  ); 
+  $items['admin/config/system/crossdog/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Crossdog Settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('crossdog_admin_settings'), 
+    'access arguments' => array('administer site configuration'),
+    'file' => 'crossdog_admin.inc',
+    'type'     => MENU_LOCAL_TASK,
+    'weight' => -10,
+  ); 
+  
+  $items['admin/config/system/crossdog/report'] = array(
+    'title' => 'Report',
+    'description' => 'Crossdog Report',
+    'page callback' => 'crossdog_basic_report', 
+    'access arguments' => array('administer site configuration'),
+    'file' => 'crossdog_admin.inc',
+    'type'     => MENU_LOCAL_TASK,
+    'weight' => -5,
+  );
+   
+  $items['admin/crossdog/updates'] = array( 
+    'page callback' => 'crossdog_updates',
+    'file' => 'crossdog_admin.inc', 
+    'access callback' => TRUE,
+    'type'  => MENU_CALLBACK, // remote REST call to request shared log events
+  );  
+    
+  return $items;
+  
+}
+
+/**
+ * Implements hook_cron().
+ */
+function crossdog_cron() {
+  include_once('crossdog_admin.inc');
+  // periodically check for updates from remote clients
+  crossdog_check_for_client_updates_cronjob(); 
+}
+
+ 
+/**
+ * Implements hook_watchdog().
+ */
+function crossdog_watchdog($log_entry) { 
+// intercept logs and add type to types list if extra variable found
+// alternately, adding 'crossdog' => TRUE to the watchdog variable list automatically adds the type to 
+// crossdog's list  
+  include_once('crossdog_admin.inc');
+  if (isset($log_entry['variables']['crossdog'])) crossdog_addtype($log_entry['type']);
+  // if this item matches the list of crossdog types, set a flag that updates exist
+  if (crossdog_log_entry_match($log_entry)) { 
+    variable_set('crossdog_updates', TRUE); 
+    if (variable_get('crossdog_show_messages', FALSE)) {
+      drupal_set_message(t('Crossdog Log: ') . t($log_entry['message'], $log_entry['variables']));      
+    }
+  }
+} 
+
+/**
+ * alternate API for adding a log entry which should be shared 
+ */
+// 
+function crossdog($log_entry) {  
+  include_once('crossdog_admin.inc');
+  crossdog_addtype($log_entry['type']);
+  watchdog($log_entry);
+}
+ 
+ /*
+  * 
+ 
+// implements hook_entity_info
+function crossdog_entity_info() {
+  $return['crossdog'] = array( 
+    'label'      => t('Crossdog'),
+    'controller class' => 'CrossdogController',
+    'base table'       => 'crossdog',
+    'uri callback'     => 'crossdog_uri',
+    'fieldable'        => TRUE,
+    'entity keys'      => array(
+      'id' => 'wid',
+      'bundle' => 'type',
+      'label'  => 'message',
+    ),
+    'bundle keys'      => array(
+      'bundle'  => 'type',
+    ),
+    'static cache'     => TRUE,
+    'bundles'          => array(),
+    'view modes'       => array(
+      'full' => array(
+        'label'  => t('Full Report'),
+        'custom settings' => FALSE,
+      ),
+      'teaser' => array(
+        'label' => t('Teaser'),
+        'custom settings' => FALSE,
+      ),
+    ),  
+  ); 
+  
+  foreach (crossdog_types() as $type => $info) {
+    $return['crossdog']['bundles'][$type] = array(
+      'label' => $info->name,
+      'admin' => array(
+        'path' => 'admin/config/crossdog/manage/%log_type',
+        'real path' => 'admin/config/crossdog/manage/' . str_replace('_', '-', $type),
+        'bundle argument' => 4,
+        'access arguments' => array('administer site'),        
+      ),
+    );    
+  }
+  
+  return $return;
+}
+
+
+function crossdog_uri($crossdog) {
+  return array(
+    'path' => $crossdog->link, // external link supplied by each watchdog entry
+  ); 
+}
+ 
+// we only have one types atm, but I wanted to gain familiarity
+// with  entity types
+function crossdog_types() {
+  $types = &drupal_static(__FUNCTION__);   // cool PHP trick
+  if (empty($types)) {
+    $types['crossdog_entry'] = array(
+      'type' => 'crossdog_entry',
+      'name' => 'Crossdog',
+      'description' => 'Crossdog Log Entry',
+    );
+  }  
+  return $types;
+}
+
+// return type information given type name
+function crossdog_type_load($type) {  
+  $types = crossdog_types();
+  $type = str_replace('-', '_', $type);
+  return (isset($types[$type])) ? $types[$type] : FALSE;  
+}
+  
+// load single log entry from wid  
+function crossdog_load($wid = NULL) {
+  $wids = (isset($wid) ? array($wid) : array());
+ // $conditions = (isset($message_types) ? 
+  $crossdog_entry = entity_load('crossdog', $wids); 
+  return $crossdog_entry; 
+}
+
+// load many items give type 
+function crossdog_load_entries($message_types = array()) {
+  // get list of entity wids
+  $query = new EntityFieldQuery(); 
+  $query
+    ->entityCondition('entity_type', 'crossdog', '=')
+    ->propertyCondition('type', $message_types, '='); 
+  $result = $query->execute();
+  // load and return entities
+  $wids = array();
+  foreach ($result['crossdog'] as $record) $wids[] = $record->wid; 
+  $crossdog_entries = entity_load('crossdog', $wids); 
+  return $crossdog_entries;  
+}
+ 
+
+ 
+  * 
+  * 
+  */
+ 
+
+

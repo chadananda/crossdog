@@ -1,0 +1,64 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the crossdog module.
+ */  
+ 
+// Our new table will essentially have the same fields as the watchdog table
+// with the addition of "log_site' 
+function crossdog_schema() {
+  $schema['crossdog'] = drupal_get_schema('watchdog'); // copy and extend watchdog table 
+  
+  //drupal_set_message("Watchdog Schema <pre>". print_r($schema['crossdog'], 1) . "</pre>");
+  
+  $schema['crossdog']['description'] = 'Storage properties for Crossdog';  
+  $schema['crossdog']['module'] = 'crossdog';  
+  $schema['crossdog']['name'] = 'crossdog';  
+  
+  $schema['crossdog']['fields']['wid'] = array(
+    'description' => 'Replaces the old WID primary Key with just an int',
+    'type'        => 'int',
+    'not null'    => TRUE,
+    'default'     => 0,
+  );  
+  $schema['crossdog']['fields']['cid'] = array(   
+    'type'        => 'serial',
+    'not null'    => TRUE,
+  );
+  $schema['crossdog']['primary key'] = array('cid');
+  
+  
+  $schema['crossdog']['fields']['log_site'] = array(
+    'description' => 'The site originating this log entry',
+    'type'        => 'varchar',
+    'length'      => 256,
+    'not null'    => TRUE,
+    'default'     => '',  
+  );
+  $schema['crossdog']['fields']['user_name'] = array(
+    'description' => 'The user name originating this log entry',
+    'type'        => 'varchar',
+    'length'      => 256,
+    'not null'    => TRUE,
+    'default'     => '',  
+  );
+  $schema['crossdog']['fields']['user_mail'] = array(
+    'description' => 'The user email originating this log entry',
+    'type'        => 'varchar',
+    'length'      => 256,
+    'not null'    => TRUE,
+    'default'     => '',  
+  );
+  
+  
+  //drupal_set_message("Crossdog Schema <pre>". print_r($schema['crossdog'], 1) . "</pre>");
+  
+  return $schema;
+}
+
+
+
+
+
+
