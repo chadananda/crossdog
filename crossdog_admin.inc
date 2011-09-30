@@ -199,6 +199,16 @@ function crossdog_admin_settings() {
     '#rows' => 2,
   );   
   
+  if ($agg_count = db_query("SELECT count(*) FROM {crossdog}")->fetchField()) {
+    // option to delete aggregated items
+    $form['client_server']['crossdog_delete_all'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Delete @count aggregated logs', array('@count' => $agg_count)),
+      '#description' => t('Permaently delete all aggregated data.'),
+      '#default_value' => variable_get('crossdog_delete_all', FALSE), 
+    ); 
+  }
+  
   // server access keys to accept  
   $form['client_server']['crossdog_access_keys'] = array(
     '#type' => 'textarea',
@@ -267,6 +277,12 @@ function crossdog_admin_settings_submit($form, &$form_state) {
   
   // show drupal message on matching logs
   variable_set('crossdog_show_messages', $input['crossdog_show_messages']); 
+  
+  // delete matching logs  crossdog_delete_all
+  if (isset($input['crossdog_delete_all']) && $input['crossdog_delete_all']) {
+    db_delete('crossdog')->execute();  
+  }
+  
 }
 
 
