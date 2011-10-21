@@ -122,7 +122,7 @@ function crossdog_check_for_client_updates_cronjob() {
          drupal_set_message("Request failed from client {$client}, error: {$data->error}", 'warning'); 
        }
     }    
-    //variable_set('crossdog_last_checked', strtotime("now"));
+    variable_set('crossdog_last_checked', strtotime("now"));
   }  
   
 }
