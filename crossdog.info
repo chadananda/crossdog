@@ -3,4 +3,4 @@ description = Receive and aggregate select watchdog messages from remote sites
 core = 7.x   
 configure = admin/config/system/crossdog
 dependencies[] = dblog
-package = "* Link Collaboration Tools"
+package = "* King of Content"
